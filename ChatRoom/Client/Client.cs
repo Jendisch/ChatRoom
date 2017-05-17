@@ -12,23 +12,78 @@ namespace Client
     {
         TcpClient clientSocket;
         NetworkStream stream;
+        bool connected;
+
         public Client(string IP, int port)
         {
-            clientSocket = new TcpClient();
-            clientSocket.Connect(IPAddress.Parse(IP), port);
-            stream = clientSocket.GetStream();
+            connected = true;
+            using (clientSocket = new TcpClient())
+            {
+                Console.WriteLine("Connecting.....");
+                clientSocket.Connect(IPAddress.Parse(IP), port);
+                Console.WriteLine("Connected");
+                string userName = AskForUserName();
+                stream = clientSocket.GetStream();
+                try
+                {
+                    byte[] message = Encoding.ASCII.GetBytes(userName);
+                    stream.Write(message, 0, message.Count());
+                }
+                catch
+                {
+                    Console.WriteLine("Something went wrong.");
+                }
+                //Place loops around here somewhere
+                Task send = Task.Run(() => Send());
+                Task receive = Task.Run(() => Receive());
+                receive.Wait();
+                clientSocket.Close();
+                Console.WriteLine("Disconnected.");
+                Console.ReadKey();
+                connected = false;
+            }
         }
+
         public void Send()
         {
-            string messageString = UI.GetInput();
-            byte[] message = Encoding.ASCII.GetBytes(messageString);
-            stream.Write(message, 0, message.Count());
+            while (connected == true)
+            {
+                try
+                {
+                    string messageString = UI.GetInput();
+                    byte[] message = Encoding.ASCII.GetBytes(messageString);
+                    stream.Write(message, 0, message.Count());
+                }
+                catch
+                {
+                    Console.WriteLine("Something went wrong.");
+                }
+            }
         }
-        public void Recieve()
+
+        public void Receive()
         {
-            byte[] recievedMessage = new byte[256];
-            stream.Read(recievedMessage, 0, recievedMessage.Length);
-            UI.DisplayMessage(Encoding.ASCII.GetString(recievedMessage));
+            while (connected == true)
+            {
+                try
+                {
+                    byte[] receivedMessages = new byte[256];
+                    stream.Read(receivedMessages, 0, receivedMessages.Length);
+                    UI.DisplayMessage(Encoding.ASCII.GetString(receivedMessages));
+                }
+                catch
+                {
+                    Console.WriteLine("Something went wrong.");
+                }
+            }
+        }
+        
+        private string AskForUserName()
+        {
+            Console.WriteLine("Please enter your chat room username.");
+            string user = UI.GetInput();
+            return user;
         }
     }
 }
+

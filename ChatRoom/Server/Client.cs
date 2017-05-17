@@ -11,19 +11,48 @@ namespace Server
     {
         NetworkStream stream;
         TcpClient client;
-        public string UserId;
+        private string userId;
+        private bool connected;
+
+        public string UserId
+        {
+            get
+            {
+                return userId;
+            }
+            set
+            {
+                userId = value;
+            }
+        }
+
+        public bool Connected
+        {
+            get
+            {
+                return connected;
+            }
+            set
+            {
+                connected = value;
+            }
+        }
+
         public Client(NetworkStream Stream, TcpClient Client)
         {
             stream = Stream;
             client = Client;
-            UserId = "495933b6-1762-47a1-b655-483510072e73";
+            UserId = "Default User";
+            connected = true;
         }
+
         public void Send(string Message)
         {
             byte[] message = Encoding.ASCII.GetBytes(Message);
             stream.Write(message, 0, message.Count());
         }
-        public string Recieve()
+
+        public void Recieve()
         {
             byte[] recievedMessage = new byte[256];
             stream.Read(recievedMessage, 0, recievedMessage.Length);
@@ -31,8 +60,17 @@ namespace Server
             Message message = new Message(null, recievedMessageString);
             Server.messageQueue.Enqueue(message);
             Console.WriteLine(recievedMessageString);
-            return recievedMessageString;
         }
+
+        public void SetUserName()
+        {
+            byte[] recievedID = new byte[256];
+            stream.Read(recievedID, 0, recievedID.Length);
+            string recievedMessageString = Encoding.ASCII.GetString(recievedID).Trim('\0');
+            userId = recievedMessageString;
+            Console.WriteLine($"{userId} has entered the chat!");
+        }
+
 
     }
 }

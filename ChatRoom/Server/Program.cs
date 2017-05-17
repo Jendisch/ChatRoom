@@ -15,3 +15,8 @@ namespace Server
         }
     }
 }
+
+
+
+//one loop thats always sending messages
+//one loop thats always accepting new clients
