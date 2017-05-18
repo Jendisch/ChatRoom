@@ -33,7 +33,6 @@ namespace Client
                 {
                     Console.WriteLine("Something went wrong.");
                 }
-                //Place loops around here somewhere
                 Task send = Task.Run(() => Send());
                 Task receive = Task.Run(() => Receive());
                 receive.Wait();
@@ -67,7 +66,7 @@ namespace Client
             {
                 try
                 {
-                    byte[] receivedMessages = new byte[256];
+                    byte[] receivedMessages = new byte[88];
                     stream.Read(receivedMessages, 0, receivedMessages.Length);
                     UI.DisplayMessage(Encoding.ASCII.GetString(receivedMessages));
                 }

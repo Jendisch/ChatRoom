@@ -52,19 +52,22 @@ namespace Server
             stream.Write(message, 0, message.Count());
         }
 
-        public void Recieve()
+        public void Receive()
         {
-            byte[] recievedMessage = new byte[256];
-            stream.Read(recievedMessage, 0, recievedMessage.Length);
-            string recievedMessageString = Encoding.ASCII.GetString(recievedMessage);
-            Message message = new Message(null, recievedMessageString);
-            Server.messageQueue.Enqueue(message);
-            Console.WriteLine(recievedMessageString);
+            while (connected == true)
+            {
+                byte[] recievedMessage = new byte[88];
+                stream.Read(recievedMessage, 0, recievedMessage.Length);
+                string recievedMessageString = Encoding.ASCII.GetString(recievedMessage);
+                Message message = new Message(this, recievedMessageString);
+                Server.messageQueue.Enqueue(message);
+                Console.WriteLine(recievedMessageString);
+            }
         }
 
         public void SetUserName()
         {
-            byte[] recievedID = new byte[256];
+            byte[] recievedID = new byte[88];
             stream.Read(recievedID, 0, recievedID.Length);
             string recievedMessageString = Encoding.ASCII.GetString(recievedID).Trim('\0');
             userId = recievedMessageString;
