@@ -10,22 +10,29 @@ using System.Threading.Tasks;
 
 namespace Server
 {
+
+
+
     class Server
     {
 
         public static ConcurrentQueue<Message> messageQueue = new ConcurrentQueue<Message>();
-        private static Dictionary<string, Client> connectedClientsInChat;
+        public static Dictionary<string, Client> connectedClientsInChat;
         public static Client client;
         TcpListener server;
         bool connected;
+        private TxtLog chatLog;
+        public static Object dictionaryLock;
 
-        public Server()
+        public Server(TxtLog chatLog)
         {
+            this.chatLog = chatLog;
             connectedClientsInChat = new Dictionary<string, Client>();
             server = new TcpListener(IPAddress.Parse("127.0.0.1"), 9999);
             server.Start();
             Console.WriteLine("Attemping to make a connection...");
             CreateResponse();
+            dictionaryLock = new Object();
         }
 
         public void Run()
@@ -43,9 +50,9 @@ namespace Server
                 catch
                 {
                     Console.WriteLine("Something went wrong.");
+                    break;
                 }
             }
-
             connected = false;
         }
 
@@ -57,9 +64,7 @@ namespace Server
             Task userNameSet = Task.Run(() => CheckForDupilcateUserName(client, stream));
         }
 
-
-
-        public void CreateResponse()
+        private void CreateResponse()
         {
             Thread respond = new Thread(() => Respond());
             respond.Start();
@@ -75,26 +80,34 @@ namespace Server
                 {
                     if (message.MessageBody.StartsWith("WHISPER")) //use whisper and then username of other client to send a personal message
                     {
-                        string matchedUserId = message.MessageBody.Split()[1];
-                        bool dictionaryContainsUserId = SearchForUser(matchedUserId);
-                        if (dictionaryContainsUserId == true)
+                        lock (dictionaryLock)
                         {
-                            foreach (KeyValuePair<string, Client> privateSender in connectedClientsInChat)
+                            string matchedUserId = message.MessageBody.Split()[1];
+                            bool dictionaryContainsUserId = SearchForUser(matchedUserId);
+                            if (dictionaryContainsUserId == true)
                             {
-                                if (privateSender.Key == matchedUserId)
+                                foreach (KeyValuePair<string, Client> privateSender in connectedClientsInChat)
                                 {
-                                    privateSender.Value.Send($"[{DateTime.Now.ToString("h:mm:ss tt")}] {message.Sender.UserId}: {message.MessageBody}");
+                                    if (privateSender.Key == matchedUserId)
+                                    {
+                                        privateSender.Value.Send($"[{DateTime.Now.ToString("h:mm:ss tt")}] {message.Sender.UserId}: {message.MessageBody}");
+                                        chatLog.Log($"[{DateTime.Now.ToString("h:mm:ss tt")}] {message.Sender.UserId} 'WHISPER' to {matchedUserId} >> {message.MessageBody}");
+                                    }
                                 }
                             }
                         }
                     }
                     else
                     {
-                        foreach (KeyValuePair<string, Client> keyValue in connectedClientsInChat)
+                        lock (dictionaryLock)
                         {
-                            if (keyValue.Key != message.UserId)
+                            foreach (KeyValuePair<string, Client> keyValue in connectedClientsInChat)
                             {
-                                keyValue.Value.Send($"[{DateTime.Now.ToString("h:mm:ss tt")}] {message.Sender.UserId}: {message.MessageBody}");
+                                if (keyValue.Key != message.UserId)
+                                {
+                                    keyValue.Value.Send($"[{DateTime.Now.ToString("h:mm:ss tt")}] {message.Sender.UserId}: {message.MessageBody}");
+                                    chatLog.Log($"[{DateTime.Now.ToString("h:mm:ss tt")}] {message.Sender.UserId} >> {message.MessageBody}");
+                                }
                             }
                         }
                     }
@@ -102,32 +115,38 @@ namespace Server
             }
         }
 
-        private async Task CheckForDupilcateUserName(Client client, NetworkStream stream)
+        private void CheckForDupilcateUserName(Client client, NetworkStream stream)
         {
             client.SetUserName();
-            if (!connectedClientsInChat.ContainsKey(client.UserId))
+            lock (dictionaryLock)
             {
-                connectedClientsInChat.Add(client.UserId, client);
-                ShowOnlineUsers(client);
-                Thread receive = new Thread(() => client.Receive());
-                receive.Start();
-            }
-            else
-            {
-                client.Send("This username already in use. Try to use another.\n");
-                await CheckForDupilcateUserName(client, stream);
+                if (!connectedClientsInChat.ContainsKey(client.UserId))
+                {
+                    connectedClientsInChat.Add(client.UserId, client);
+                    ShowOnlineUsers(client);
+                    chatLog.Log($"[{DateTime.Now.ToString("h:mm:ss tt")}] >> {client.UserId} connected to the chatroom");       //WORKING ON GETTING A LOG METHOD BY THE MESSAGES SOMEWHERE TO BE ABLE TO LOG ALL MESSAGES
+                    Thread receive = new Thread(() => client.Receive(chatLog, connectedClientsInChat));
+                    receive.Start();
+                }
+                else
+                {
+                    client.Send("This username already in use. Try to use another.\n");
+                }
             }
         }
 
         private bool SearchForUser(string matchedUserId)
         {
-            if (connectedClientsInChat.ContainsKey(matchedUserId))
+            lock (dictionaryLock)
             {
-                return true;
-            }
-            else
-            {
-                return false;
+                if (connectedClientsInChat.ContainsKey(matchedUserId))
+                {
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
             }
         }
 
@@ -140,20 +159,30 @@ namespace Server
 
         private void ShowOnlineUsers(Client client)
         {
-            if (connectedClientsInChat.Count() > 1)
+            lock (dictionaryLock)
             {
-                client.Send("Online Users:");
-                foreach (KeyValuePair<string, Client> entry in connectedClientsInChat)
+                if (connectedClientsInChat.Count() > 1)
                 {
-                    if (entry.Key != client.UserId)
+                    foreach (KeyValuePair<string, Client> keyValue in connectedClientsInChat)
                     {
-                        client.Send($"\n>>{entry.Key}");
+                        if (keyValue.Key != client.UserId)
+                        {
+                            keyValue.Value.Send($"\n{client.UserId} just joined the chat!");
+                        }
+                    }
+                    client.Send("Online Users:");
+                    foreach (KeyValuePair<string, Client> online in connectedClientsInChat)
+                    {
+                        if (online.Key != client.UserId)
+                        {
+                            client.Send($"\n>>{online.Key}");
+                        }
                     }
                 }
-            }
-            else
-            {
-                client.Send($"You're the only one here {client.UserId}, sorry!");
+                else
+                {
+                    client.Send($"You're the only one here {client.UserId}, sorry!");
+                }
             }
         }
 
