@@ -47,9 +47,9 @@ namespace Server
                     Thread clientThread = new Thread(() => AcceptClient(clientSocket));
                     clientThread.Start();
                 }
-                catch
+                catch (Exception e)
                 {
-                    Console.WriteLine("Something went wrong.");
+                    Console.WriteLine(e);
                     break;
                 }
             }
@@ -124,7 +124,7 @@ namespace Server
                 {
                     connectedClientsInChat.Add(client.UserId, client);
                     ShowOnlineUsers(client);
-                    chatLog.Log($"[{DateTime.Now.ToString("h:mm:ss tt")}] >> {client.UserId} connected to the chatroom");       //WORKING ON GETTING A LOG METHOD BY THE MESSAGES SOMEWHERE TO BE ABLE TO LOG ALL MESSAGES
+                    chatLog.Log($"[{DateTime.Now.ToString("h:mm:ss tt")}] >> {client.UserId} connected to the chatroom");      
                     Thread receive = new Thread(() => client.Receive(chatLog, connectedClientsInChat));
                     receive.Start();
                 }
@@ -148,13 +148,6 @@ namespace Server
                     return false;
                 }
             }
-        }
-
-        private string GetMessage(NetworkStream stream)
-        {
-            byte[] recievedMessage = new byte[256];
-            stream.Read(recievedMessage, 0, recievedMessage.Length);
-            return Encoding.ASCII.GetString(recievedMessage).Trim(new char[] { '\0' }).Trim();
         }
 
         private void ShowOnlineUsers(Client client)

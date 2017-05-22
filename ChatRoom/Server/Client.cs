@@ -26,18 +26,6 @@ namespace Server
             }
         }
 
-        public bool Connected
-        {
-            get
-            {
-                return connected;
-            }
-            set
-            {
-                connected = value;
-            }
-        }
-
         public Client(NetworkStream Stream, TcpClient Client)
         {
             stream = Stream;
@@ -53,9 +41,9 @@ namespace Server
                 byte[] message = Encoding.ASCII.GetBytes(Message);
                 stream.Write(message, 0, message.Count());
             }
-            catch
+            catch (Exception e)
             {
-                Console.WriteLine("Client has left the chat.");
+                Console.WriteLine(e);
             }
         }
 
@@ -99,11 +87,6 @@ namespace Server
             string recievedMessageString = Encoding.ASCII.GetString(recievedID).Trim('\0');
             userId = recievedMessageString;
             Console.WriteLine($"{userId} has entered the chat!");
-
         }
-
-
-
-
     }
 }

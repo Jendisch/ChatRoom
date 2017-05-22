@@ -15,6 +15,3 @@ namespace Client
         }
     }
 }
-
-
-//One sending loop and one recieving loop within Client

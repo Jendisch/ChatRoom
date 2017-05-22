@@ -53,9 +53,9 @@ namespace Client
                     byte[] message = Encoding.ASCII.GetBytes(messageString);
                     stream.Write(message, 0, message.Count());
                 }
-                catch
+                catch (Exception e)
                 {
-                    Console.WriteLine("Something went wrong.");
+                    Console.WriteLine(e);
                 }
             }
         }
@@ -70,9 +70,9 @@ namespace Client
                     stream.Read(receivedMessages, 0, receivedMessages.Length);
                     UI.DisplayMessage(Encoding.ASCII.GetString(receivedMessages));
                 }
-                catch
+                catch (Exception e)
                 {
-                    Console.WriteLine("Something went wrong.");
+                    Console.WriteLine(e);
                 }
             }
         }

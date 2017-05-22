@@ -13,7 +13,7 @@ namespace Server
 
         public TxtLog(string fileName)
         {
-            logFileName = fileName + ".\\ChatLog.txt";
+            logFileName = "..\\ChatLog.txt";
         }
 
         public void Log(string message)
@@ -22,9 +22,9 @@ namespace Server
             {
                 File.AppendAllText(logFileName, $"{DateTime.Now.ToString("h:mm:ss tt")}: {message}\n" + Environment.NewLine);
             }
-            catch
+            catch (Exception e)
             {
-                Console.WriteLine("Problem writing to or accessing the log file.");
+                Console.WriteLine(e);
             }
         }
     }
